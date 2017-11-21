@@ -6,14 +6,17 @@ let optsTopLevel: number[] = [];
 let optsExpandNodes: number[] = [];
 let optsDoSort = true;
 let optsDoSelect = true;
+let optsMarkPrivates = true;
 
 export class SymbolNode {
     symbol: SymbolInformation;
     children?: SymbolNode[];
+    isPrivate: boolean;
 
     constructor(symbol?: SymbolInformation) {
         this.children = [];
         this.symbol = symbol;
+        this.isPrivate = false;
     }
 
     /**
@@ -45,6 +48,31 @@ export class SymbolNode {
             return 1;
         }
         return -1;
+    }
+
+    /**
+     * set the isPrivate property of the symbol if this SymbolNode
+     * is a constructor, function, or method with a 'private' modifier.
+     * else set isPrivate to false.
+     * @param editor - the handle to the current editor file in focus
+     */
+    checkIfPrivate(editor: TextEditor) {
+        switch (this.symbol.kind) {
+            case SymbolKind.Constructor:
+            case SymbolKind.Function:
+            case SymbolKind.Method:
+                // parse the current editor file and determine if this function is public or private.
+                // also use simple search rather than regex for faster performance
+                let snippet = editor.document.getText(this.symbol.location.range);
+                let idxPrivate = snippet.indexOf('private');
+
+                // if the 'private' modifier appears before the function name, then set the isPrivate property
+                this.isPrivate = ((idxPrivate >= 0) && (idxPrivate <= snippet.indexOf(this.symbol.name)));
+                break;
+            default:
+                // skip other kinds
+                break;
+        }
     }
 
     sort() {
@@ -87,7 +115,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
                symbols = symbols.filter(sym => optsTopLevel.indexOf(sym.kind) >= 0);
             }
             // Create symbol nodes
-            const symbolNodes = symbols.map(symbol => new SymbolNode(symbol));
+            const symbolNodes: SymbolNode[] = symbols.map(symbol => new SymbolNode(symbol));
             // Sort nodes by left edge ascending and right edge descending
             symbolNodes.sort(this.compareSymbols);
             // Start with an empty list of parent candidates
@@ -106,6 +134,11 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
                 }
                 // Add current node as a parent candidate
                 potentialParents.push(currentNode);
+
+                // check if this node is a private function
+                if (optsMarkPrivates) {
+                    currentNode.checkIfPrivate(editor);
+                }
             });
             if (optsDoSort) {
                 tree.sort();
@@ -147,9 +180,9 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
         }
     }
 
-    private getIcon(kind: SymbolKind): {dark: string; light: string} {
+    private getIcon(node: SymbolNode): {dark: string; light: string} {
         let icon: string;
-        switch (kind) {
+        switch (node.symbol.kind) {
             case SymbolKind.Class:
                 icon = 'class';
                 break;
@@ -159,7 +192,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
             case SymbolKind.Constructor:
             case SymbolKind.Function:
             case SymbolKind.Method:
-                icon = 'function';
+                icon = (node.isPrivate) ? 'function-private' : 'function';
                 break;
             case SymbolKind.Interface:
                 icon = 'interface';
@@ -211,7 +244,7 @@ export class SymbolOutlineProvider implements TreeDataProvider<SymbolNode> {
             ]
         };
 
-        treeItem.iconPath = this.getIcon(kind);
+        treeItem.iconPath = this.getIcon(node);
         return treeItem;
     }
 
@@ -227,6 +260,7 @@ function readOpts() {
    optsExpandNodes = convertEnumNames(opts.get<string[]>("expandNodes"));
    optsSortOrder = convertEnumNames(opts.get<string[]>("sortOrder"));
    optsTopLevel = convertEnumNames(opts.get<string[]>("topLevel"));
+   optsMarkPrivates = opts.get<boolean>("markPrivates");
 }
 
 function convertEnumNames(names:string[]):number[] {

@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.0.13
+
+- Implements a different icon for private vs public functions/methods
+
 ## 0.0.12
 
 - Implement a much faster tree building algorithm ([issue #55](https://github.com/patrys/vscode-code-outline/issues/55))

@@ -18,6 +18,7 @@ Default settings:
 {
   "symbolOutline.doSort": true,
   "symbolOutline.doSelect": true,
+  "symbolOutline.markPrivates": true,
   "symbolOutline.sortOrder": [
     "Class",
     "Module",
@@ -45,9 +46,10 @@ Default settings:
 
 - **doSort:** sort the outline.
 - **doSelect:** select the code segment by selecting item.
+- **markPrivates:** mark private functions with a different icon than public.
 - **expandNodes:** kinds of nodes to be expanded automatically.
 - **sortOrder:** order to the sort symbols.
-- **topLevel:** wich symbols include at the topmost scope.
+- **topLevel:** which symbols include at the topmost scope.
 
 ## Known Issues
 
